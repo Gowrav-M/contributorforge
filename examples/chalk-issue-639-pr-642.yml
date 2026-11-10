@@ -1,0 +1,13 @@
+# Historical evaluation example, not upstream-approved. Review every field and
+# command, then change approved to true locally before running ContributorForge.
+# Recorded PR 642 base fc809b686d5048d56fec3a5d96d1ad57dee193bf failed;
+# fork head f0387937832645204ef1956adeb71fe53744a66a passed (REGRESSION_CHECK_PASSED).
+version: 1
+repository: chalk/chalk
+issue: 639
+pullRequest: 642
+approved: false
+comparisonCheck: { mode: inline }
+expectedFailure: ISSUE_639_NAVIGATOR
+reproduction: >-
+  node --input-type=module -e 'delete globalThis.navigator; try { await import("./source/vendor/supports-color/browser.js"); } catch (error) { if (!(error instanceof ReferenceError) || !error.message.includes("navigator")) throw error; console.error("ISSUE_639_NAVIGATOR", error.message); process.exit(1); } console.log("PASS: browser module imports without navigator");'

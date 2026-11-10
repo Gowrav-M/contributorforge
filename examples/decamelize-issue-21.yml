@@ -1,0 +1,12 @@
+# Historical evaluation example, not upstream-approved. Review every field and
+# command, then change approved to true locally before running ContributorForge.
+# Recorded base 9ac3cb535f46e08eedb6ac7417e9bc26f5ff58bf failed with the marker;
+# head 26c7530b4fe5674809cb91c3df2615cf065492ab passed (REGRESSION_CHECK_PASSED).
+version: 1
+repository: sindresorhus/decamelize
+issue: 21
+approved: false
+comparisonCheck: { mode: inline }
+expectedFailure: ISSUE_21_ADDRESS1
+reproduction: >-
+  node -e 'const decamelize = require("./index.js"); const actual = decamelize("ADDRESS1"); if (actual === "addres_s1") { console.error("ISSUE_21_ADDRESS1", actual); process.exit(1); } if (actual !== "address1") throw new Error("Unexpected result: " + actual); console.log("PASS: ADDRESS1 -> address1");'
