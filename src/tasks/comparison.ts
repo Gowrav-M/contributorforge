@@ -7,7 +7,7 @@ import { parsePullRequestUrl } from '../github/pull-request.js';
 import { escapeHtml as e } from '../reports/html.js';
 import { redact } from '../reports/redact.js';
 import type { Config } from '../types.js';
-import type { Comparison } from '../verification/compare.js';
+import type { Comparison, ComparisonStatus } from '../verification/compare.js';
 import type { PullRequestEvidence } from '../verification/pr-comparison.js';
 import { ensureDirectory, fence, taskId, writeBundle } from './bundle.js';
 
@@ -20,6 +20,23 @@ interface ComparisonInput {
   fixture?: boolean;
   pullRequest?: PullRequestEvidence;
 }
+
+const resultTone: Record<ComparisonStatus, 'success' | 'failure' | 'neutral' | 'warning'> = {
+  REGRESSION_CHECK_PASSED: 'success',
+  BUG_STILL_REPRODUCED: 'failure',
+  BASE_NOT_REPRODUCED: 'neutral',
+  CHECK_MISMATCH: 'warning',
+  ENVIRONMENT_BLOCKED: 'warning',
+  EVIDENCE_INCOMPLETE: 'warning',
+  VERIFICATION_ERROR: 'failure',
+};
+
+const freshnessLabel: Record<PullRequestEvidence['freshness'], string> = {
+  UNCHANGED: 'PR revisions matched at recheck',
+  HEAD_CHANGED: 'PR head changed',
+  BASE_CHANGED: 'PR base changed',
+  UNKNOWN: 'PR freshness could not be confirmed',
+};
 
 export async function writeComparison(root: string, raw: ComparisonInput): Promise<string> {
   validateComparisonShas(raw.base, raw.head);
@@ -40,6 +57,10 @@ export async function writeComparison(root: string, raw: ComparisonInput): Promi
   const input = JSON.parse(JSON.stringify(raw, (_key, value: unknown) => typeof value === 'string' ? redact(value) : value)) as ComparisonInput;
   const { issue, config, result, fixture, pullRequest } = input;
   const status = pullRequest && pullRequest.freshness !== 'UNCHANGED' ? `PR_${pullRequest.freshness}` : result.status;
+  const freshnessWarning = pullRequest && pullRequest.freshness !== 'UNCHANGED'
+    ? `${freshnessLabel[pullRequest.freshness]}. The regression result applies only to the earlier pinned revisions. Run a new comparison to evaluate the current PR.`
+    : undefined;
+  const tone = freshnessWarning ? 'warning' : resultTone[result.status];
   const freshness = pullRequest
     ? `PR #${pullRequest.pinned.number} · ${pullRequest.pinned.merged ? 'merged' : pullRequest.pinned.state} · ${pullRequest.pinned.fork ? 'fork' : 'same repository'} · ${pullRequest.freshness}\nChecked at: ${pullRequest.checkedAt}\nObserved base: ${pullRequest.observed?.base.sha ?? 'Unavailable'}\nObserved head: ${pullRequest.observed?.head.sha ?? 'Unavailable'}\nPinned comparison result: ${result.status}\n${pullRequest.reason ?? ''}${pullRequest.checkoutCleanupError ? `\nCheckout cleanup failed: ${pullRequest.checkoutCleanupError}` : ''}`
     : '';
@@ -69,7 +90,9 @@ export async function writeComparison(root: string, raw: ComparisonInput): Promi
     const environment = result.environmentDifferences.join('\n') || 'No differences reported in the checked Docker metadata. Check whether both phases ran below.';
     const caveat = 'This comparison concerns the approved check only. Dependencies, external services, source behavior and test coverage can still differ. It does not establish general correctness, security or merge approval.';
     const check = JSON.stringify(result.checkEvidence ?? null, null, 2);
-    const prMd = pullRequest ? `\n[Pull request](${pullRequest.pinned.url})\n\n${fence(freshness)}\n` : '';
+    const prMd = pullRequest
+      ? `\n[Pull request](${pullRequest.pinned.url})\n\nPR freshness: \`${pullRequest.freshness}\` · ${freshnessLabel[pullRequest.freshness]}\n\nPinned regression result: \`${result.status}\`\n\n${freshnessWarning ? `${freshnessWarning}\n\n` : ''}${fence(freshness)}\n`
+      : '';
     const md = `# Regression comparison\n\n${fixture ? 'Authored local fixture' : issue.url}\n${prMd}\n${status}\n\n${fence(result.reason)}\n\n${caveat}\n\n## Approved commands\n\n${fence(`Setup: ${config.setup ?? 'None'}\nReproduction: ${config.reproduction}`)}\n\n${summary}\n\n## Observed differences\n\n${logDifference}\n\n${fence(environment)}\n\n## Check identity\n\n${fence(check)}\n`;
     const panels = sides.map((side) => {
       const { run, verification } = result[side];
@@ -94,7 +117,14 @@ main { max-width:1120px; margin:auto; padding:32px 24px; animation:enter .3s cub
 header { border-bottom:1px solid var(--line); padding-bottom:24px; }
 .kicker, dt { color:var(--muted); font: .8rem/1.5 'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:.08em; }
 h1 { font-size:clamp(1.8rem,5vw,3rem); line-height:1.15; margin:8px 0 24px; }
-.status { display:inline-block; color:var(--accent); padding:4px 8px; border:1px solid var(--line); border-radius:var(--radius); }
+.status { display:inline-block; color:var(--status-text); background:var(--status-bg); padding:4px 8px; border:1px solid var(--status-line); border-radius:var(--radius); }
+.status--success { --status-text:#a1eac8; --status-bg:#122820; --status-line:#39775d; }
+.status--failure { --status-text:#ffb8b5; --status-bg:#301a1a; --status-line:#915051; }
+.status--neutral { --status-text:#d4d8df; --status-bg:#22252b; --status-line:#555d6c; }
+.status--warning { --status-text:#ffe09b; --status-bg:#2c2313; --status-line:#91723b; }
+.freshness-note { color:#ffe09b; background:#2c2313; border-inline-start:3px solid #91723b; padding:8px 16px; }
+.pr-evidence { display:grid; gap:8px; }
+.pr-evidence dd { margin:0; }
 .grid { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; margin:24px 0; }
 section { min-width:0; padding:16px; border:1px solid var(--line); border-radius:var(--radius); background:var(--panel); }
 h2 { margin:0 0 8px; font-size:1.2rem; }
@@ -108,8 +138,13 @@ summary { cursor:pointer; }
 @keyframes enter { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
 @media (prefers-reduced-motion:reduce) { main { animation:none; } }
 </style></head><body><main><header><p class="kicker">ContributorForge / ${fixture ? 'Local fixture' : `<a href="${e(issue.url)}">${e(issue.owner)}/${e(issue.repo)} #${issue.number}</a>`}</p>
-<h1>${e(issue.title)}</h1><strong class="status">${e(status)}</strong><p>${e(result.reason)}</p><p>${caveat}</p>
-${pullRequest ? `<p><a href="${e(pullRequest.pinned.url)}">Pull request #${pullRequest.pinned.number}</a></p><pre>${e(freshness)}</pre>` : ''}</header>
+<h1>${e(issue.title)}</h1><strong class="status status--${tone}">${e(status)}</strong>
+${freshnessWarning ? `<p class="freshness-note">${e(freshnessWarning)}</p>` : ''}
+${pullRequest ? `<p><a href="${e(pullRequest.pinned.url)}">Pull request #${pullRequest.pinned.number}</a></p>
+<dl class="pr-evidence"><dt>PR freshness</dt><dd>${freshnessLabel[pullRequest.freshness]} · <code>${e(pullRequest.freshness)}</code></dd>
+<dt>Pinned regression result</dt><dd><code>${e(result.status)}</code></dd></dl>` : ''}
+<p>${e(result.reason)}</p><p>${caveat}</p>
+${pullRequest ? `<details><summary>PR revision observations</summary><pre>${e(freshness)}</pre></details>` : ''}</header>
 <div class="grid">${panels}</div><section><h2>Observed differences</h2><p>${logDifference}</p><pre>${e(environment)}</pre>
 <h2>Approved commands</h2><pre>${e(`Setup: ${config.setup ?? 'None'}\nReproduction: ${config.reproduction}`)}</pre>
 <h2>Check identity</h2><pre>${e(check)}</pre>
