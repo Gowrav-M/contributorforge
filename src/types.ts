@@ -6,6 +6,7 @@ export interface Config {
   setup?: string;
   reproduction: string;
   expectedFailure?: string;
+  comparisonCheck?: { mode: 'inline' } | { mode: 'files'; paths: string[] };
   image: string;
   setupNetwork: boolean;
   reproductionNetwork: boolean;

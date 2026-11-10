@@ -3,12 +3,54 @@ import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Command } from 'commander';
 import { CONFIG_TEMPLATE, loadConfig } from '../config/config.js';
-import { checkoutIssue, fetchIssue, parseIssueUrl, type Issue } from '../github/github.js';
+import { checkoutIssue, confirmRepositoryRevision, fetchIssue, parseIssueUrl, validateComparisonShas, type Issue } from '../github/github.js';
 import { runDocker, type RunnerResult } from '../runner/docker.js';
 import { writeBundle } from '../tasks/bundle.js';
 import { classify, exitCodes, type Verification } from '../verification/classify.js';
+import { compareSources, type ComparisonStatus } from '../verification/compare.js';
+import { writeComparison } from '../tasks/comparison.js';
+import { redact } from '../reports/redact.js';
 
 interface Options { config: string; commit?: string }
+
+const comparisonExits: Record<ComparisonStatus, number> = {
+  REGRESSION_CHECK_PASSED: 0, BUG_STILL_REPRODUCED: 1, BASE_NOT_REPRODUCED: 1,
+  CHECK_MISMATCH: 2, ENVIRONMENT_BLOCKED: 3, EVIDENCE_INCOMPLETE: 4, VERIFICATION_ERROR: 4,
+};
+
+async function handleCompare(url: string, options: { config: string; base: string; head: string }): Promise<void> {
+  let config: Awaited<ReturnType<typeof loadConfig>>;
+  try {
+    const ref = parseIssueUrl(url);
+    validateComparisonShas(options.base, options.head);
+    config = await loadConfig(resolve(options.config));
+    if (config.repository.toLowerCase() !== `${ref.owner}/${ref.repo}`.toLowerCase() || config.issue !== ref.number) {
+      throw new Error('Approved configuration must match the requested repository and issue.');
+    }
+  } catch (error) {
+    console.error(`CHECK_MISMATCH — ${redact(error instanceof Error ? error.message : 'Invalid comparison input.')}`);
+    process.exitCode = 2;
+    return;
+  }
+  const issue = await fetchIssue(url);
+  await confirmRepositoryRevision(issue, options.base);
+  await confirmRepositoryRevision(issue, options.head);
+  const temp = await mkdtemp(join(tmpdir(), 'contributorforge-compare-'));
+  try {
+    const baseSource = join(temp, 'base');
+    const headSource = join(temp, 'head');
+    console.error('Preparing separate pinned base and head checkouts…');
+    await checkoutIssue({ ...issue, commit: options.base }, baseSource);
+    await checkoutIssue({ ...issue, commit: options.head }, headSource);
+    console.error('Evaluating the approved comparison in Docker…');
+    const result = await compareSources(baseSource, headSource, config);
+    const path = await writeComparison(process.cwd(), { issue, config, result, base: options.base, head: options.head });
+    console.log(`${result.status}\nComparison: ${path}`);
+    process.exitCode = comparisonExits[result.status];
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
+}
 
 async function directory(path: string): Promise<void> {
   try { await mkdir(path); }
@@ -98,7 +140,13 @@ export async function initializeConfig(path: string): Promise<void> {
 
 export function createProgram(): Command {
   const program = new Command();
-  program.name('contributorforge').description('Turn a GitHub issue into a verified contributor task bundle.').version('0.1.0');
+  program.name('contributorforge').description('Turn a GitHub issue into a verified contributor task bundle.').version('0.2.0');
+  program.command('compare <issue-url>')
+    .description('Compare the same approved regression check at two pinned commits')
+    .requiredOption('--base <sha>', 'Full base commit SHA')
+    .requiredOption('--head <sha>', 'Full head commit SHA')
+    .option('-c, --config <path>', 'Locally approved configuration', '.contributorforge.yml')
+    .action(handleCompare);
   program.command('init').description('Create a documented, unapproved configuration template')
     .option('-c, --config <path>', 'Configuration path', '.contributorforge.yml')
     .action(async (options: { config: string }) => {

@@ -25,6 +25,32 @@ const repositorySchema = z.object({ private: z.literal(false), default_branch: z
 const issueSchema = z.object({ number: z.number().int().positive(), title: z.string().max(4096), body: z.string().max(1024 * 1024).nullable(), labels: z.array(z.object({ name: z.string() })), state: z.enum(['open', 'closed']), pull_request: z.unknown().optional() });
 const commitSchema = z.object({ sha: z.string().regex(/^[a-f0-9]{40}$/) });
 
+export function validateComparisonShas(base: string, head: string): void {
+  if (![base, head].every((sha) => /^[a-f0-9]{40}$/.test(sha))) throw new Error('Base and head must be full lowercase commit SHAs.');
+  if (base === head) throw new Error('Base and head must be different commits.');
+}
+
+/** GitHub can resolve objects from a fork network by SHA. Require evidence of a
+ * repository-owned reference as well as the subsequent exact Git checkout. */
+export async function confirmRepositoryRevision(issue: Issue, sha: string, execute: ProcessExecutor = runProcess): Promise<void> {
+  const ref = parseIssueUrl(issue.url);
+  if (!/^[a-f0-9]{40}$/.test(sha) || !/^[a-f0-9]{40}$/.test(issue.commit)) throw new Error('Invalid pinned revision.');
+  const endpoint = `repos/${ref.owner}/${ref.repo}`;
+  const get = async (path: string, jq: string): Promise<string | undefined> => {
+    const result = await execute('gh', ['api', '--hostname', 'github.com', '--method', 'GET', path, '--jq', jq], {
+      timeoutMs: 30_000, maxOutputBytes: 16_384,
+    });
+    if (result.error || result.timedOut || result.truncated || result.exitCode !== 0) return undefined;
+    return result.output.trim();
+  };
+  if (sha === issue.commit) return;
+  const ancestor = await get(`${endpoint}/compare/${sha}...${issue.commit}`, '.merge_base_commit.sha');
+  if (ancestor === sha) return;
+  const branchCount = await get(`${endpoint}/commits/${sha}/branches-where-head`, 'length');
+  if (branchCount && /^[1-9][0-9]*$/.test(branchCount)) return;
+  throw new Error(`Cannot confirm ${sha} on the repository default-branch history or as the tip of a repository branch.`);
+}
+
 export async function fetchIssue(url: string, execute: ProcessExecutor = runProcess): Promise<Issue> {
   const ref = parseIssueUrl(url);
   const endpoint = `repos/${ref.owner}/${ref.repo}`;
@@ -77,6 +103,6 @@ export async function checkoutIssue(issue: Issue, destination: string, execute: 
   if (await git(['rev-parse', 'HEAD']) !== issue.commit) throw new Error('Checkout HEAD does not match the requested commit.');
   const tree = await git(['ls-tree', '-r', 'HEAD']);
   if (/^(120000|160000) /m.test(tree)) {
-    throw new Error('Symlinks and submodules are unsupported in v0.1; refusing an incomplete or altered reproduction source.');
+    throw new Error('Symlinks and submodules are unsupported; refusing an incomplete or altered reproduction source.');
   }
 }
