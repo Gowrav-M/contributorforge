@@ -1,22 +1,11 @@
 # ContributorForge
 
-For a public GitHub pull request, use an explicitly approved issue check:
+ContributorForge turns GitHub issues and pull requests into reproducible, evidence-backed contributor tasks.
 
-```sh
-contributorforge compare-pr https://github.com/owner/repository/pull/42 --config .contributorforge.yml
-```
+It pins public source revisions, runs a check you approve inside Docker, and
+creates a local report and a task packet you can hand to a contributor.
 
-The config must name the base `repository`, the tracked `issue` and the
-`pullRequest` number. See [pull request verification](docs/PR_COMPARISON.md)
-for configuration, public-fork support and recorded examples.
-
-Turn a messy GitHub issue into a verified, reproducible, contributor-ready coding task.
-
-ContributorForge is a local TypeScript CLI for maintainers and contributors. It pins
-a public repository to an exact commit, runs explicitly approved reproduction
-commands in Docker, and packages the observed evidence with instructions for a
-human contributor or coding agent. It does not invent reproduction steps from an
-issue body, post to GitHub, or run an agent for you.
+[Install locally](#install-from-a-local-tarball) · [Try a verified example](#try-a-real-pull-request) · [Contribute](CONTRIBUTING.md)
 
 ## Short demo
 
@@ -44,7 +33,7 @@ CLI never falls back to executing downloaded code on your host.
 ## Prerequisites
 
 - Node.js 22 LTS or a later supported LTS release.
-- pnpm 10.32.1, as recorded in `package.json`.
+- pnpm 10.32.1 to build from source. A prebuilt tarball only needs npm to install.
 - Git and [GitHub CLI](https://cli.github.com/), authenticated with `gh auth login`.
 - Docker Engine or Docker Desktop running **Linux containers**.
 - Sufficient disk space for a repository checkout and runtime image.
@@ -52,37 +41,76 @@ CLI never falls back to executing downloaded code on your host.
 The fixture demo does not need a GitHub issue or a GitHub API key. Public issue
 verification uses your existing `gh` access. No LLM API key is required.
 
-## Install from source
+## Install from a local tarball
+
+ContributorForge has not been published to npm. Build
+and pack a local tarball, then install that file in the project where you want
+to run ContributorForge:
 
 ```sh
 git clone https://github.com/Gowrav-M/contributorforge.git
 cd contributorforge
 pnpm install --frozen-lockfile
-pnpm build
-node dist/cli/index.js --help
+npm pack
+cd path/to/your-project
+npm install --no-save --ignore-scripts /path/to/contributorforge/contributorforge-0.4.0.tgz
+npm exec --offline -- contributorforge --help
 ```
 
-For a local shell command, optionally run `npm link` after building. The package
-name is `contributorforge`; v0.2 is prepared for packaging, **not published to npm**.
-Use source installation rather than assuming `npx contributorforge` is available.
+Adjust the tarball path and version to match the generated filename. The tarball
+contains the built CLI and examples; npm installs the declared runtime
+dependencies during local installation, so those dependencies must be available
+from your configured registry or cache. After installation, `npm exec --offline`
+uses the local binary without looking up a public `contributorforge` package.
+For source development, `pnpm dev -- --help` runs the CLI directly; `npm link`
+is another local option.
+
+When evaluating the unmerged v0.4 change, build from the
+`feat/v0.4-adoption-readiness` branch. After merging, use `main`.
+
+## Try a real pull request
+
+After the tarball install, copy the bundled config into your current project:
+
+```sh
+node -e "require('node:fs').copyFileSync('node_modules/contributorforge/examples/chalk-issue-639-pr-642.yml', 'chalk-642.yml', require('node:fs').constants.COPYFILE_EXCL)"
+```
+
+Review the command and pinned sources in the [Chalk #642 example](docs/PR_COMPARISON.md#public-fork-chalk-pr-642),
+then set `approved: true` in your copy. This is your local approval.
+
+```sh
+docker pull node:22-bookworm-slim
+npm exec --offline -- contributorforge doctor --config chalk-642.yml
+npm exec --offline -- contributorforge compare-pr https://github.com/chalk/chalk/pull/642 --config chalk-642.yml
+```
+
+In the packaged-CLI run, base exited 1 with `ISSUE_639_NAVIGATOR navigator is not defined`
+and the fork head exited 0 with `PASS: browser module imports without navigator`.
+The CLI printed `REGRESSION_CHECK_PASSED` and the comparison directory. Open its
+`report.html` to inspect both sides. The result covers this one check at the
+recorded commits. See the [pilot guide](docs/PILOT_GUIDE.md) for the next steps.
 
 ## Quick start
 
 In a directory where you want to store contributor task packets:
 
 ```sh
-contributorforge init
+npm exec --offline -- contributorforge init
 ```
 
 This creates `.contributorforge.yml` with `approved: false` and never overwrites an
-existing file. Have a maintainer provide issue-specific commands, review them, and
-edit the file. For example, adapt this configuration to your own issue and test:
+existing file. Run `npm exec --offline -- contributorforge doctor --config .contributorforge.yml` to
+check local prerequisites and the selected configuration. Have a maintainer
+provide issue-specific commands, review them, and only then change
+`approved: false` to `approved: true` locally. For example, adapt this
+configuration to your own issue and test:
 
 ```yaml
 version: 1
 repository: owner/repository
 issue: 42
-approved: true
+approved: false
 setup: npm ci
 reproduction: npm run test:issue-42
 expectedFailure: ISSUE_42_REGRESSION
@@ -97,15 +125,16 @@ acceptanceCriteria:
   - The issue-specific regression passes with the intended behavior.
 ```
 
-The example commands must exist in the target repository. `approved: true` is your
-local assertion that a maintainer reviewed these commands; it is not a signature
-or an independently verified maintainer identity. A repository's own downloaded
-configuration is not automatically trusted.
+The example commands must exist in the target repository. Review every field and
+command, then change `approved: false` to `approved: true` locally before use.
+That value is your assertion that you reviewed the commands; it is not a
+signature or independently verified maintainer identity. A repository's own
+downloaded configuration is not automatically trusted.
 
 ```sh
 docker pull node:22-bookworm-slim
-contributorforge verify https://github.com/owner/repository/issues/42
-contributorforge start https://github.com/owner/repository/issues/42
+npm exec --offline -- contributorforge verify https://github.com/owner/repository/issues/42
+npm exec --offline -- contributorforge start https://github.com/owner/repository/issues/42
 ```
 
 `verify` reads issue metadata, resolves a commit, checks out source, runs the
@@ -139,7 +168,7 @@ check is an invariant command written directly in the reviewed configuration,
 It must not be used to claim a repository test is unchanged without checking it.
 
 ```sh
-contributorforge compare https://github.com/owner/repository/issues/42 --base <full-base-sha> --head <full-head-sha> --config .contributorforge.yml
+npm exec --offline -- contributorforge compare https://github.com/owner/repository/issues/42 --base <full-base-sha> --head <full-head-sha> --config .contributorforge.yml
 ```
 
 Both revisions receive separate checkouts, setup and Docker execution. A passing
@@ -250,3 +279,14 @@ Core tests use authored fixtures and injected infrastructure responses, not a
 live third-party repository. The Docker demo is a separate integration check.
 See [CONTRIBUTING.md](CONTRIBUTING.md), [ARCHITECTURE.md](ARCHITECTURE.md), and
 [ROADMAP.md](ROADMAP.md). Licensed under [MIT](LICENSE).
+
+## Maintainer onboarding
+
+Start with the [pilot guide](docs/PILOT_GUIDE.md), which walks through preparing
+and reviewing a first issue check. Four historical, runnable config examples
+are in [`examples/`](examples/); they all default to `approved: false` and need
+local human review before approval. The pilot guide also covers the included
+[troubleshooting notes](docs/TROUBLESHOOTING.md),
+[maintainer feedback form](docs/MAINTAINER_FEEDBACK.md), and
+[release checklist](docs/RELEASE_CHECKLIST.md).
+See the [0.4 release notes](docs/RELEASE_0.4.md) for the release summary.

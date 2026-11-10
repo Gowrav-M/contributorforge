@@ -46,11 +46,13 @@ and their snapshots remained unchanged during the runs.
 - Head: `chalk/chalk@b86cf6243269c22d0d3204679e68fabf39d39f50`
 
 ```yaml
+# The historical run used local approval. A fresh copy starts unapproved;
+# review it and change approved to true locally before running compare-pr.
 version: 1
 repository: chalk/chalk
 issue: 624
 pullRequest: 688
-approved: true
+approved: false
 comparisonCheck: { mode: inline }
 expectedFailure: ISSUE_624_FORCE_COLOR
 reproduction: >-
@@ -71,11 +73,13 @@ With `env -u CI` in the same approved command for both sides, the base exited
 - Head: `hyperupcall/chalk@f0387937832645204ef1956adeb71fe53744a66a`
 
 ```yaml
+# The historical run used local approval. A fresh copy starts unapproved;
+# review it and change approved to true locally before running compare-pr.
 version: 1
 repository: chalk/chalk
 issue: 639
 pullRequest: 642
-approved: true
+approved: false
 comparisonCheck: { mode: inline }
 expectedFailure: ISSUE_639_NAVIGATOR
 reproduction: >-

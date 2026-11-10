@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0 — Unreleased
+
+- Add a read-only `doctor` command for local setup and configuration diagnostics.
+- Verify clean tarball installs in CI and update pinned actions to Node.js 24 runtimes.
+- Add copyable historical examples, troubleshooting, a maintainer pilot kit and
+  release checklists.
+
 ## 0.3.0
 
 - Add `compare-pr` with explicit issue and pull request binding.

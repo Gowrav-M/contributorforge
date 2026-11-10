@@ -1,8 +1,8 @@
 # Roadmap
 
-v0.3 adds approved regression comparisons for same-repository and public-fork
-pull requests. Next, explore a way to distribute a reviewed, immutable
-regression harness independently of both source trees.
+v0.4 focuses on a tested install, useful diagnostics, and independent maintainer
+feedback. Use the [pilot guide](docs/PILOT_GUIDE.md) to try the documented
+journey before adding more capabilities.
 
 These are proposed milestones, not implemented features or delivery commitments.
 
