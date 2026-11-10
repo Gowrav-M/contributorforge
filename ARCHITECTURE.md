@@ -1,6 +1,6 @@
 # ContributorForge architecture
 
-ContributorForge v0.2 is a local TypeScript CLI on Node.js 22 LTS. pnpm owns
+ContributorForge v0.3 is a local TypeScript CLI on Node.js 22 LTS. pnpm owns
 dependencies; Vitest exercises behavior without third-party repositories.
 
 ## Trust and evidence
@@ -54,6 +54,14 @@ from single-revision verification so an unchanged reproduced bug cannot look lik
 a passing regression comparison.
 
 ## Modules
+
+`compare-pr` resolves a public pull request with read-only GitHub metadata.
+The approved config must bind the base repository, issue and PR number before
+fetching metadata. The same checkout abstraction pins each SHA against its
+own public repository. Forks use separate checkouts and the existing runner
+and comparison engine. A second metadata read records freshness without
+switching the source of either run. Reports keep the pinned comparison outcome
+separate from the current-PR status.
 
 - `cli`: argument parsing and orchestration; documented exit codes.
 - `config`: strict YAML schema and explicit approval.

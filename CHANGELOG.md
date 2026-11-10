@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Add `compare-pr` with explicit issue and pull request binding.
+- Compare exact base and head SHAs from public GitHub metadata, including forks.
+- Recheck revisions after running the comparison and preserve the pinned evidence
+  when the head or base moves or GitHub freshness cannot be confirmed.
+- Include per-revision repository provenance and freshness in the comparison packet.
+
 ## 0.2.0 — Unreleased
 
 - Add `compare` for an approved issue-specific check at explicit base and head
