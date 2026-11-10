@@ -10,9 +10,10 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src tests",
+    "lint": "eslint src tests examples",
     "test": "vitest run",
     "dev": "tsx src/cli/index.ts",
+    "demo": "tsx examples/demo.ts",
     "prepack": "pnpm build"
   },
   "license": "MIT",
