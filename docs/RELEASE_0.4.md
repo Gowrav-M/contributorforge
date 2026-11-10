@@ -46,8 +46,10 @@ scripts disabled. The installed executable reported 0.4.0, created an unapproved
 config, and passed doctor with a reviewed config. The installed `verify`
 command reproduced escape-string-regexp #20. All four packaged comparisons
 returned `REGRESSION_CHECK_PASSED` after local review and approval. The installed
-`start --help` passed the smoke test. The execution environment blocked the
-full installed `start` invocation, so that path was not exercised end to end.
+`start` passed an opt-in integration run against public issue #20. The
+installed CLI created a workspace at the requested detached SHA, printed
+reviewed Docker instructions, and did not create the host setup sentinel.
+Repeat with `pnpm smoke:package --public-start` using GitHub CLI authentication.
 
 The exact historical public issue checks are recorded in
 [real-world validation](REAL_WORLD_VALIDATION.md). Public PR checks and their

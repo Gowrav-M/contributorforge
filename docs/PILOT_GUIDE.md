@@ -6,19 +6,34 @@ with a clear failure marker.
 
 ## 1. Install and check the machine
 
-Build a local package from the checked-out ContributorForge source:
+Open a successful [main-branch CI run](https://github.com/Gowrav-M/contributorforge/actions/workflows/ci.yml)
+for v0.4 and download the `contributorforge-pilot` artifact. GitHub sign-in may
+be required. The artifact expires after 30 days. It contains the npm tarball,
+`SHA256SUMS` and `SOURCE_COMMIT`; compare the commit with the run's source.
+The SHA-256 file detects corruption or a mismatched download. Trust the
+repository and the run before installing.
 
 ```sh
-pnpm install --frozen-lockfile
-pnpm build
-pnpm pack
+gh run download RUN_ID --repo Gowrav-M/contributorforge --name contributorforge-pilot --dir forge-pilot
+cd forge-pilot
+sha256sum -c SHA256SUMS
 ```
 
-Install the generated `contributorforge-<version>.tgz` in the target project:
+On PowerShell, compare
+`(Get-FileHash -Algorithm SHA256 ./contributorforge-0.4.0.tgz).Hash`
+with the first value in `Get-Content ./SHA256SUMS`. On macOS use
+`shasum -a 256 -c SHA256SUMS`. If the artifact expired, use the
+[source-build fallback](../README.md#install-from-a-local-tarball).
+
+Install in an empty pilot project with Node.js 22 or newer and npm. Verification
+also needs Git, an authenticated GitHub CLI, and a local Linux Docker engine:
 
 ```sh
-npm install --no-save /absolute/path/to/contributorforge/contributorforge-<version>.tgz
-npm exec --offline -- contributorforge --help
+mkdir forge-trial
+cd forge-trial
+npm init -y
+npm install --ignore-scripts /absolute/path/to/forge-pilot/contributorforge-0.4.0.tgz
+docker pull node:22-bookworm-slim
 npm exec --offline -- contributorforge doctor
 ```
 
@@ -99,6 +114,27 @@ security, or merge decision. See [PR comparison](PR_COMPARISON.md) and the
 
 ## 4. Historical examples
 
+For the first run, copy the bundled configs into the pilot project:
+
+```sh
+node -e "for(const f of ['escape-string-regexp-issue-20.yml','chalk-issue-639-pr-642.yml'])require('node:fs').copyFileSync('node_modules/contributorforge/examples/'+f,f,require('node:fs').constants.COPYFILE_EXCL)"
+```
+
+Read both configs and the linked validation records below. After reviewing
+the exact commands and public sources, set `approved: true` in your local copies.
+Then run:
+
+```sh
+npm exec --offline -- contributorforge verify https://github.com/sindresorhus/escape-string-regexp/issues/20 --commit 5085b257c801507460270b747f645276fbc1d937 --config escape-string-regexp-issue-20.yml
+npm exec --offline -- contributorforge compare-pr https://github.com/chalk/chalk/pull/642 --config chalk-issue-639-pr-642.yml
+```
+
+The first command recorded `REPRODUCED`. The fork comparison recorded
+`REGRESSION_CHECK_PASSED` at the SHAs in the [PR validation record](PR_COMPARISON.md).
+Open the printed directory's `report.html` and check which revision failed,
+which passed, and what the result does and does not cover. You can also
+download the [sanitized example report](pilot-report.html) and open it offline.
+
 The four YAML files in [`../examples/`](../examples/) reproduce checks recorded
 in [real-world validation](REAL_WORLD_VALIDATION.md) and
 [PR comparison](PR_COMPARISON.md). They are historical evaluation configs, not
@@ -127,6 +163,11 @@ Ask each maintainer to follow the guide unassisted first and fill in the
 report, where they stopped, and whether they correctly interpreted the result.
 Fix repeated blockers before expanding the pilot. Share sanitized findings
 without identifying participants unless they consent.
+
+Count a pilot as complete when the maintainer installs independently, evaluates
+a real public issue or PR, correctly explains the evidence and its scope,
+and returns feedback. Track interest in running a second evaluation separately.
+Aim for five completed pilots before deciding whether to widen distribution.
 
 ## Candidate first contributions
 

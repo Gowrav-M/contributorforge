@@ -19,6 +19,7 @@ focused on the observed workflow and include reproducible details where possible
 - Did the command produce the expected issue-specific result?
 - Which artifacts were useful or confusing?
 - Was the result reproducible on a second run?
+- Would you use it on another issue or PR? If so, which one? If not, what blocked you?
 
 ## Friction and evidence
 

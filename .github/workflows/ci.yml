@@ -48,6 +48,26 @@ jobs:
         run: pnpm demo
       - name: Docker base and head comparison
         run: pnpm demo:compare
+      - name: Prepare pilot tarball
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/contributorforge-pilot"
+          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/contributorforge-pilot"
+          cd "$RUNNER_TEMP/contributorforge-pilot"
+          sha256sum contributorforge-*.tgz > SHA256SUMS
+          printf '%s\n' "$GITHUB_SHA" > SOURCE_COMMIT
+      - name: Upload pilot tarball
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6, Node 24
+        with:
+          name: contributorforge-pilot
+          path: |
+            ${{ runner.temp }}/contributorforge-pilot/contributorforge-*.tgz
+            ${{ runner.temp }}/contributorforge-pilot/SHA256SUMS
+            ${{ runner.temp }}/contributorforge-pilot/SOURCE_COMMIT
+          retention-days: 30
+          if-no-files-found: error
 
   package-smoke-windows:
     runs-on: windows-latest
