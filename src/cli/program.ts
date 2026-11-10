@@ -12,6 +12,7 @@ import { writeComparison } from '../tasks/comparison.js';
 import { redact } from '../reports/redact.js';
 import { assertPullRequestBinding, parsePullRequestUrl } from '../github/pull-request.js';
 import { comparePullRequest } from '../verification/pr-comparison.js';
+import { inspectSetup } from './doctor.js';
 
 interface Options { config: string; commit?: string }
 
@@ -169,7 +170,15 @@ export async function initializeConfig(path: string): Promise<void> {
 
 export function createProgram(): Command {
   const program = new Command();
-  program.name('contributorforge').description('Turn a GitHub issue into a verified contributor task bundle.').version('0.3.0');
+  program.name('contributorforge').description('Turn GitHub issues and pull requests into evidence-backed contributor tasks.').version('0.4.0');
+  program.command('doctor')
+    .description('Check local prerequisites, Docker image and configuration')
+    .option('-c, --config <path>', 'Configuration path')
+    .action(async (options: { config?: string }) => {
+      const results = await inspectSetup({ configPath: resolve(options.config ?? '.contributorforge.yml'), explicitConfig: options.config !== undefined });
+      for (const result of results) console.log(`${result.level} ${result.name} — ${result.message}`);
+      process.exitCode = results.some((result) => result.level === 'FAIL') ? 1 : 0;
+    });
   program.command('compare-pr <github-pr-url>')
     .description('Compare pinned public GitHub PR revisions with an approved issue check')
     .requiredOption('-c, --config <path>', 'Locally approved issue and pull request configuration')
