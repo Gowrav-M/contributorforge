@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>Regression comparison · ContributorForge</title><style>
+:root { color-scheme: dark; --bg:#0a0a0a; --panel:#141414; --line:#383838; --text:#ededed; --muted:#b4b4b4; --accent:#94e4c1; --space:8px; --radius:6px; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font: 1rem/1.55 Geist,system-ui,sans-serif; overflow-wrap:anywhere; }
+main { max-width:1120px; margin:auto; padding:32px 24px; animation:enter .3s cubic-bezier(.16,1,.3,1); }
+header { border-bottom:1px solid var(--line); padding-bottom:24px; }
+.kicker, dt { color:var(--muted); font: .8rem/1.5 'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:.08em; }
+h1 { font-size:clamp(1.8rem,5vw,3rem); line-height:1.15; margin:8px 0 24px; }
+.status { display:inline-block; color:var(--status-text); background:var(--status-bg); padding:4px 8px; border:1px solid var(--status-line); border-radius:var(--radius); }
+.status--success { --status-text:#a1eac8; --status-bg:#122820; --status-line:#39775d; }
+.status--failure { --status-text:#ffb8b5; --status-bg:#301a1a; --status-line:#915051; }
+.status--neutral { --status-text:#d4d8df; --status-bg:#22252b; --status-line:#555d6c; }
+.status--warning { --status-text:#ffe09b; --status-bg:#2c2313; --status-line:#91723b; }
+.freshness-note { color:#ffe09b; background:#2c2313; border-inline-start:3px solid #91723b; padding:8px 16px; }
+.pr-evidence { display:grid; gap:8px; }
+.pr-evidence dd { margin:0; }
+.grid { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; margin:24px 0; }
+section { min-width:0; padding:16px; border:1px solid var(--line); border-radius:var(--radius); background:var(--panel); }
+h2 { margin:0 0 8px; font-size:1.2rem; }
+dd { margin:0 0 8px; }
+pre, .commit { font-family:'JetBrains Mono',Consolas,monospace; font-size:.85rem; }
+pre { white-space:pre-wrap; padding:12px; background:var(--bg); border:1px solid var(--line); max-height:32rem; overflow:auto; }
+a { color:var(--accent); text-underline-offset:4px; } a:hover, summary:hover { color:white; }
+a:focus-visible, summary:focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
+summary { cursor:pointer; }
+@media (min-width:720px) { .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@keyframes enter { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+@media (prefers-reduced-motion:reduce) { main { animation:none; } }
+</style></head><body><main><header><p class="kicker">ContributorForge / <a href="https://github.com/chalk/chalk/issues/639">chalk/chalk #639</a></p>
+<h1>Not handling navigator being undefined</h1><strong class="status status--success">REGRESSION_CHECK_PASSED</strong>
+
+<p><a href="https://github.com/chalk/chalk/pull/642">Pull request #642</a></p>
+<dl class="pr-evidence"><dt>PR freshness</dt><dd>PR revisions matched at recheck · <code>UNCHANGED</code></dd>
+<dt>Pinned regression result</dt><dd><code>REGRESSION_CHECK_PASSED</code></dd></dl>
+<p>The invariant approved check reproduced the expected failure at base and passed at head under matching recorded environments. This does not prove every aspect of the bug is fixed.</p><p>This comparison concerns the approved check only. Dependencies, external services, source behavior and test coverage can still differ. It does not establish general correctness, security or merge approval.</p>
+<details><summary>PR revision observations</summary><pre>PR #642 · merged · fork · UNCHANGED
+Checked at: 2026-11-10T07:11:14.738Z
+Observed base: fc809b686d5048d56fec3a5d96d1ad57dee193bf
+Observed head: f0387937832645204ef1956adeb71fe53744a66a
+Pinned comparison result: REGRESSION_CHECK_PASSED
+</pre></details></header>
+<div class="grid"><section><h2>Base</h2><p>chalk/chalk</p><p class="commit"><a href="https://github.com/chalk/chalk/commit/fc809b686d5048d56fec3a5d96d1ad57dee193bf">fc809b686d5048d56fec3a5d96d1ad57dee193bf</a></p>
+        <p><strong>REPRODUCED</strong></p><p>The approved check failed with the expected marker.</p>
+        <dl><dt>Setup</dt><dd>unavailable</dd><dt>Reproduction</dt><dd>exit 1 · 419 ms</dd>
+        <dt>Started</dt><dd>2026-11-10T07:11:10.610Z</dd><dt>Docker / platform</dt><dd>29.9.2 / linux/amd64</dd>
+        <dt>Image ID</dt><dd>sha256:5ec23b7c622b00547753bc6ffd78085dd868a68aeb41c8e0a1418f033e13d96d</dd></dl>
+        <details open><summary>Reproduction output</summary><pre>ISSUE_639_NAVIGATOR navigator is not defined
+</pre></details></section><section><h2>Head</h2><p>hyperupcall/chalk</p><p class="commit"><a href="https://github.com/hyperupcall/chalk/commit/f0387937832645204ef1956adeb71fe53744a66a">f0387937832645204ef1956adeb71fe53744a66a</a></p>
+        <p><strong>NOT_REPRODUCED</strong></p><p>The approved check passed.</p>
+        <dl><dt>Setup</dt><dd>unavailable</dd><dt>Reproduction</dt><dd>exit 0 · 435 ms</dd>
+        <dt>Started</dt><dd>2026-11-10T07:11:12.148Z</dd><dt>Docker / platform</dt><dd>29.9.2 / linux/amd64</dd>
+        <dt>Image ID</dt><dd>sha256:5ec23b7c622b00547753bc6ffd78085dd868a68aeb41c8e0a1418f033e13d96d</dd></dl>
+        <details open><summary>Reproduction output</summary><pre>PASS: browser module imports without navigator
+</pre></details></section></div><section><h2>Observed differences</h2><p>Captured reproduction output differs after redaction.</p><pre>No differences reported in the checked Docker metadata. Check whether both phases ran below.</pre>
+<h2>Approved commands</h2><pre>Setup: None
+Reproduction: node --input-type=module -e &#39;delete globalThis.navigator; try { await import(&quot;./source/vendor/supports-color/browser.js&quot;); } catch (error) { if (!(error instanceof ReferenceError) || !error.message.includes(&quot;navigator&quot;)) throw error; console.error(&quot;ISSUE_639_NAVIGATOR&quot;, error.message); process.exit(1); } console.log(&quot;PASS: browser module imports without navigator&quot;);&#39;</pre>
+<h2>Check identity</h2><pre>{
+  &quot;mode&quot;: &quot;inline&quot;
+}</pre>
+<p>Shareable sample from the installed 0.4.0 run. Local artifact links were removed. See the <a href="https://github.com/Gowrav-M/contributorforge/blob/main/docs/PR_COMPARISON.md">reproduction record</a>.</p></section></main></body></html>

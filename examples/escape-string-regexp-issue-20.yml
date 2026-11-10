@@ -1,0 +1,12 @@
+# Historical evaluation example, not upstream-approved. Review every field and
+# command, then change approved to true locally before running ContributorForge.
+# Recorded base 5085b257c801507460270b747f645276fbc1d937 failed with the marker;
+# head 732905da074f0220487ad6a27590f89bd0819374 passed (REGRESSION_CHECK_PASSED).
+version: 1
+repository: sindresorhus/escape-string-regexp
+issue: 20
+approved: false
+comparisonCheck: { mode: inline }
+expectedFailure: ISSUE_20_UNICODE_HYPHEN
+reproduction: >-
+  node -e 'const escape = require("./index.js"); const text = escape("-"); let regex; try { regex = new RegExp(text, "u"); } catch (error) { if (!(error instanceof SyntaxError)) throw error; console.error("ISSUE_20_UNICODE_HYPHEN", error.message); process.exit(1); } if (!regex.test("-")) throw new Error("Escaped expression did not match hyphen"); console.log("PASS: escaped hyphen is valid in Unicode mode");'

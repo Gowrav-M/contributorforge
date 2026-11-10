@@ -1,0 +1,13 @@
+# Historical evaluation example, not upstream-approved. Review every field and
+# command, then change approved to true locally before running ContributorForge.
+# Recorded PR 688 base 8a94e0ebfc495dda27f7090fb1a012790b15a76d failed;
+# head b86cf6243269c22d0d3204679e68fabf39d39f50 passed (REGRESSION_CHECK_PASSED).
+version: 1
+repository: chalk/chalk
+issue: 624
+pullRequest: 688
+approved: false
+comparisonCheck: { mode: inline }
+expectedFailure: ISSUE_624_FORCE_COLOR
+reproduction: >-
+  env -u CI FORCE_COLOR=1 COLORTERM=truecolor node --input-type=module -e 'const {supportsColor} = await import("./source/index.js"); const level = supportsColor?.level; if (level === 3) { console.error("ISSUE_624_FORCE_COLOR level=3"); process.exit(1); } if (level !== 1) throw new Error("Unexpected level: " + level); console.log("PASS: FORCE_COLOR=1 selects level 1");'

@@ -14,13 +14,15 @@ or container network access. GitHub issue metadata and source were read-only.
 - Base `5085b257c801507460270b747f645276fbc1d937`
 - Head `732905da074f0220487ad6a27590f89bd0819374`
 
-Save as `issue20.yml` after reviewing the configuration and pinned sources:
+The recorded run used local approval. For a fresh copy, save this as
+`issue20.yml`, review the configuration and pinned sources, then change
+`approved: false` to `approved: true` locally before running:
 
 ```yaml
 version: 1
 repository: sindresorhus/escape-string-regexp
 issue: 20
-approved: true
+approved: false
 comparisonCheck: { mode: inline }
 expectedFailure: ISSUE_20_UNICODE_HYPHEN
 reproduction: >-
@@ -44,13 +46,15 @@ and Unicode flag on this Node image.
 - Base `9ac3cb535f46e08eedb6ac7417e9bc26f5ff58bf`
 - Head `26c7530b4fe5674809cb91c3df2615cf065492ab`
 
-Save as `issue21.yml` after reviewing the configuration and pinned sources:
+The recorded run used local approval. For a fresh copy, save this as
+`issue21.yml`, review the configuration and pinned sources, then change
+`approved: false` to `approved: true` locally before running:
 
 ```yaml
 version: 1
 repository: sindresorhus/decamelize
 issue: 21
-approved: true
+approved: false
 comparisonCheck: { mode: inline }
 expectedFailure: ISSUE_21_ADDRESS1
 reproduction: >-

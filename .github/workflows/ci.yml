@@ -18,17 +18,17 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Check out source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5, Node 24
         with:
           persist-credentials: false
       - name: Install pnpm
-        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1, Node 24
         with:
           run_install: false
       - name: Set up Node.js LTS
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5, Node 24
         with:
-          node-version: '22'
+          node-version: '24'
           cache: pnpm
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
@@ -40,9 +40,53 @@ jobs:
         run: pnpm test
       - name: Build
         run: pnpm build
+      - name: Smoke test the packed npm package
+        run: pnpm smoke:package
       - name: Pull reviewed fixture runtime
         run: docker pull node:22-bookworm-slim
       - name: Docker fixture demonstration
         run: pnpm demo
       - name: Docker base and head comparison
         run: pnpm demo:compare
+      - name: Prepare pilot tarball
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/contributorforge-pilot"
+          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/contributorforge-pilot"
+          cd "$RUNNER_TEMP/contributorforge-pilot"
+          sha256sum contributorforge-*.tgz > SHA256SUMS
+          printf '%s\n' "$GITHUB_SHA" > SOURCE_COMMIT
+      - name: Upload pilot tarball
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6, Node 24
+        with:
+          name: contributorforge-pilot
+          path: |
+            ${{ runner.temp }}/contributorforge-pilot/contributorforge-*.tgz
+            ${{ runner.temp }}/contributorforge-pilot/SHA256SUMS
+            ${{ runner.temp }}/contributorforge-pilot/SOURCE_COMMIT
+          retention-days: 30
+          if-no-files-found: error
+
+  package-smoke-windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5, Node 24
+        with:
+          persist-credentials: false
+      - name: Set up pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1, Node 24
+      - name: Set up Node.js LTS
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5, Node 24
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build
+      - name: Smoke test the packed npm package
+        run: pnpm smoke:package
