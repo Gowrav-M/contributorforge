@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -72,6 +72,31 @@ try {
   assert.match(init, /Created .*\.contributorforge\.yml/);
   assert.match(await readFile(configPath, 'utf8'), /approved: false/);
   console.log('Package smoke passed: allowlisted tarball, clean npm install, CLI help, and init.');
+
+  if (process.argv.includes('--public-start')) {
+    // Opt-in network check of a reviewed historical example. The setup marker
+    // would reveal accidental host execution, but start must only prepare source.
+    const issue = 'https://github.com/sindresorhus/escape-string-regexp/issues/20';
+    const sha = '5085b257c801507460270b747f645276fbc1d937';
+    const example = await readFile(join(installed, 'examples', 'escape-string-regexp-issue-20.yml'), 'utf8');
+    const marker = 'unexpected-host-setup';
+    await writeFile(join(install, 'reviewed.yml'), example.replace(/^approved: false$/m, 'approved: true')
+      + `\nsetup: node -e 'require("node:fs").writeFileSync("${marker}","ran")'\n`);
+    const output = cli(['start', issue, '--commit', sha, '--config', 'reviewed.yml']);
+    const workspace = /^Workspace: (.+)$/m.exec(output)?.[1]?.trim();
+    assert.ok(workspace, 'Missing workspace path');
+    const parent = await realpath(join(install, '.contributorforge', 'workspaces'));
+    const child = relative(parent, await realpath(workspace)).replaceAll('\\', '/');
+    assert.match(child, /^sindresorhus-escape-string-regexp-20-[^/]+\/source$/);
+    assert.equal(run('git', ['rev-parse', 'HEAD'], { cwd: workspace }).trim(), sha);
+    assert.equal(run('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: workspace }).trim(), 'HEAD');
+    assert.ok(existsSync(join(workspace, 'index.js')), 'Pinned checkout has no source file');
+    assert.match(output, new RegExp(`Commit: ${sha}`));
+    assert.match(output, /Approved commands \(run in Docker\):/);
+    assert.ok(output.includes(`verify ${issue} --commit ${sha}`));
+    assert.ok(!existsSync(join(install, marker)) && !existsSync(join(workspace, marker)), 'Setup ran on the host');
+    console.log(`Installed start passed: public issue #20, detached HEAD ${sha}, workspace and instructions verified; host setup marker absent.`);
+  }
 } finally {
   await rm(temp, { recursive: true, force: true });
 }
