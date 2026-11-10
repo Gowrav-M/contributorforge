@@ -10,6 +10,8 @@ import { classify, exitCodes, type Verification } from '../verification/classify
 import { compareSources, type ComparisonStatus } from '../verification/compare.js';
 import { writeComparison } from '../tasks/comparison.js';
 import { redact } from '../reports/redact.js';
+import { assertPullRequestBinding, parsePullRequestUrl } from '../github/pull-request.js';
+import { comparePullRequest } from '../verification/pr-comparison.js';
 
 interface Options { config: string; commit?: string }
 
@@ -17,6 +19,33 @@ const comparisonExits: Record<ComparisonStatus, number> = {
   REGRESSION_CHECK_PASSED: 0, BUG_STILL_REPRODUCED: 1, BASE_NOT_REPRODUCED: 1,
   CHECK_MISMATCH: 2, ENVIRONMENT_BLOCKED: 3, EVIDENCE_INCOMPLETE: 4, VERIFICATION_ERROR: 4,
 };
+
+async function handleComparePr(url: string, options: { config: string }): Promise<void> {
+  let config: Awaited<ReturnType<typeof loadConfig>>;
+  let ref: ReturnType<typeof parsePullRequestUrl>;
+  try {
+    ref = parsePullRequestUrl(url);
+    config = await loadConfig(resolve(options.config));
+    assertPullRequestBinding(ref, config);
+  } catch (error) {
+    console.error(`CHECK_MISMATCH — ${redact(error instanceof Error ? error.message : 'Invalid pull request comparison input.')}`);
+    process.exitCode = 2;
+    return;
+  }
+  try {
+    const issue = await fetchIssue(`https://github.com/${ref.repository}/issues/${config.issue}`);
+    console.error('Resolving pinned PR revisions and running the approved Docker comparison…');
+    const { evidence, result } = await comparePullRequest(url, config);
+    const { base, head } = evidence.pinned;
+    const path = await writeComparison(process.cwd(), { issue, config, result, base: base.sha, head: head.sha, pullRequest: evidence });
+    const current = evidence.freshness === 'UNCHANGED';
+    console.log(`${current ? result.status : `PR_${evidence.freshness}`}\nComparison: ${path}`);
+    process.exitCode = current ? comparisonExits[result.status] : 4;
+  } catch (error) {
+    console.error(`VERIFICATION_ERROR — ${redact(error instanceof Error ? error.message : 'Unable to compare pull request.')}`);
+    process.exitCode = 4;
+  }
+}
 
 async function handleCompare(url: string, options: { config: string; base: string; head: string }): Promise<void> {
   let config: Awaited<ReturnType<typeof loadConfig>>;
@@ -140,7 +169,11 @@ export async function initializeConfig(path: string): Promise<void> {
 
 export function createProgram(): Command {
   const program = new Command();
-  program.name('contributorforge').description('Turn a GitHub issue into a verified contributor task bundle.').version('0.2.0');
+  program.name('contributorforge').description('Turn a GitHub issue into a verified contributor task bundle.').version('0.3.0');
+  program.command('compare-pr <github-pr-url>')
+    .description('Compare pinned public GitHub PR revisions with an approved issue check')
+    .requiredOption('-c, --config <path>', 'Locally approved issue and pull request configuration')
+    .action(handleComparePr);
   program.command('compare <issue-url>')
     .description('Compare the same approved regression check at two pinned commits')
     .requiredOption('--base <sha>', 'Full base commit SHA')

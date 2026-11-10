@@ -2,7 +2,7 @@
 
 ## Supported scope
 
-The v0.1 release line receives security fixes on the default branch. This is an
+The default branch receives security fixes. This is an
 early local-first tool, not a hardened hostile-code execution service. Keep Node,
 Git, Docker and container images patched.
 
@@ -32,6 +32,13 @@ arrange a private channel. No response-time SLA or bounty is promised.
   failure marker, and a malicious test can misrepresent its behavior.
 
 ## Operational precautions
+
+Treat PR fork contents as untrusted. The local config explicitly binds the
+issue and PR number and is reviewed outside the checked-out trees. GitHub
+credentials remain in the host CLI. Public fork code runs only through the
+same restricted Docker runner. Do not put this command in a secret-bearing
+or write-privileged workflow. Freshness is a point-in-time observation, and
+a passing comparison does not authorize a merge.
 
 Docker shares a host kernel and is **not a perfect security boundary**. Run
 unfamiliar or hostile repositories in a disposable VM with no sensitive accounts,

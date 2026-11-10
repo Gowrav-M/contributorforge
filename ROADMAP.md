@@ -1,5 +1,9 @@
 # Roadmap
 
+v0.3 adds approved regression comparisons for same-repository and public-fork
+pull requests. Next, explore a way to distribute a reviewed, immutable
+regression harness independently of both source trees.
+
 These are proposed milestones, not implemented features or delivery commitments.
 
 ## v0.2: comparison foundation

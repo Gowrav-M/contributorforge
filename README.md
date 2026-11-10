@@ -1,5 +1,15 @@
 # ContributorForge
 
+For a public GitHub pull request, use an explicitly approved issue check:
+
+```sh
+contributorforge compare-pr https://github.com/owner/repository/pull/42 --config .contributorforge.yml
+```
+
+The config must name the base `repository`, the tracked `issue` and the
+`pullRequest` number. See [pull request verification](docs/PR_COMPARISON.md)
+for configuration, public-fork support and recorded examples.
+
 Turn a messy GitHub issue into a verified, reproducible, contributor-ready coding task.
 
 ContributorForge is a local TypeScript CLI for maintainers and contributors. It pins

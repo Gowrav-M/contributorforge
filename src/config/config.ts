@@ -8,6 +8,7 @@ export const configSchema = z.object({
   version: z.literal(1),
   repository: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9_][A-Za-z0-9_.-]{0,99}$/),
   issue: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  pullRequest: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
   approved: z.literal(true),
   setup: command.optional(),
   reproduction: command,
@@ -56,6 +57,7 @@ export const CONFIG_TEMPLATE = `# ContributorForge v1 configuration. Review ever
 version: 1
 repository: owner/repository
 issue: 1
+# pullRequest: 2 # Explicitly bind this issue check to a PR for compare-pr.
 approved: false
 # setup: pnpm install --frozen-lockfile
 reproduction: node regression.mjs

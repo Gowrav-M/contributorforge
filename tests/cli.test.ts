@@ -26,11 +26,14 @@ describe('CLI', () => {
       expect(comparison.exitCode, comparison.output).toBe(2);
       expect(comparison.output).toContain('CHECK_MISMATCH');
       expect(comparison.output).toContain('match the requested repository and issue');
+      const pr = await runProcess(process.execPath, ['--import', tsx, cli, 'compare-pr', 'https://github.com/owner/repo/pull/9', '--config', 'missing.yml'], { cwd });
+      expect(pr.exitCode, pr.output).toBe(2);
+      expect(pr.output).toContain('CHECK_MISMATCH');
     } finally { await rm(cwd, { recursive: true, force: true }); }
   });
-  it('documents all four commands', () => {
+  it('documents all five commands', () => {
     const help = createProgram().helpInformation();
-    for (const command of ['init', 'verify', 'start', 'compare']) expect(help).toContain(command);
+    for (const command of ['init', 'verify', 'start', 'compare', 'compare-pr']) expect(help).toContain(command);
   });
   it('creates an unapproved template without overwriting files', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'forge init '));

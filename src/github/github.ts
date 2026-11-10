@@ -84,6 +84,14 @@ export function gitEnvironment(): NodeJS.ProcessEnv {
 export async function checkoutIssue(issue: Issue, destination: string, execute: ProcessExecutor = runProcess): Promise<void> {
   const checked = parseIssueUrl(issue.url);
   if (checked.owner !== issue.owner || checked.repo !== issue.repo || checked.number !== issue.number || !/^[a-f0-9]{40}$/.test(issue.commit)) throw new Error('Invalid pinned issue source.');
+  return checkoutRevision({ repository: `${issue.owner}/${issue.repo}`, sha: issue.commit }, destination, execute);
+}
+
+export const repositoryName = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9_][A-Za-z0-9_.-]{0,99}$/;
+export interface SourceRevision { repository: string; sha: string }
+
+export async function checkoutRevision(revision: SourceRevision, destination: string, execute: ProcessExecutor = runProcess): Promise<void> {
+  if (!repositoryName.test(revision.repository) || !/^[a-f0-9]{40}$/.test(revision.sha)) throw new Error('Invalid pinned revision.');
   try {
     await lstat(destination);
     throw new Error(`Checkout destination already exists: ${destination}`);
@@ -98,9 +106,9 @@ export async function checkoutIssue(issue: Issue, destination: string, execute: 
     return result.output.trim();
   };
   await git(['init', '--template=']);
-  await git(['fetch', '--depth=1', '--no-tags', '--no-recurse-submodules', `https://github.com/${issue.owner}/${issue.repo}.git`, issue.commit]);
-  await git(['checkout', '--detach', issue.commit]);
-  if (await git(['rev-parse', 'HEAD']) !== issue.commit) throw new Error('Checkout HEAD does not match the requested commit.');
+  await git(['fetch', '--depth=1', '--no-tags', '--no-recurse-submodules', `https://github.com/${revision.repository}.git`, revision.sha]);
+  await git(['checkout', '--detach', revision.sha]);
+  if (await git(['rev-parse', 'HEAD']) !== revision.sha) throw new Error('Checkout HEAD does not match the requested commit.');
   const tree = await git(['ls-tree', '-r', 'HEAD']);
   if (/^(120000|160000) /m.test(tree)) {
     throw new Error('Symlinks and submodules are unsupported; refusing an incomplete or altered reproduction source.');

@@ -6,11 +6,64 @@ import { parseConfig } from '../src/config/config.js';
 import { confirmRepositoryRevision, parseIssueUrl, validateComparisonShas } from '../src/github/github.js';
 import { writeComparison } from '../src/tasks/comparison.js';
 import { compareSources } from '../src/verification/compare.js';
+import type { Comparison, ComparisonStatus } from '../src/verification/compare.js';
+import type { PullRequestEvidence } from '../src/verification/pr-comparison.js';
 import type { ProcessExecutor } from '../src/utils/process.js';
 
 const base = 'a'.repeat(40);
 const head = 'b'.repeat(40);
 const issue = { ...parseIssueUrl('https://github.com/owner/repo/issues/1'), title: '<script>test</script>', body: '', labels: [], state: 'closed' as const, defaultBranch: 'main', commit: head };
+const approved = parseConfig({ version: 1, approved: true, repository: 'owner/repo', issue: 1, pullRequest: 2, reproduction: 'node check.mjs', expectedFailure: 'BUG' });
+const run = { startedAt: '2026-01-01T00:00:00Z', cleanupErrors: [] };
+const side = { run, verification: { status: 'VERIFICATION_ERROR' as const, reason: 'Fixture evidence' } };
+const resultFor = (status: ComparisonStatus): Comparison => ({ base: side, head: side, status, reason: 'Comparison reason', environmentDifferences: [] });
+
+it.each([
+  ['REGRESSION_CHECK_PASSED', 'success'],
+  ['BUG_STILL_REPRODUCED', 'failure'],
+  ['BASE_NOT_REPRODUCED', 'neutral'],
+  ['CHECK_MISMATCH', 'warning'],
+  ['ENVIRONMENT_BLOCKED', 'warning'],
+  ['EVIDENCE_INCOMPLETE', 'warning'],
+  ['VERIFICATION_ERROR', 'failure'],
+] as const)('presents %s with %s styling and preserves JSON', async (status, tone) => {
+  const root = await mkdtemp(join(tmpdir(), 'forge-status-'));
+  try {
+    const result = resultFor(status);
+    const path = await writeComparison(root, { issue, base, head, config: approved, result });
+    const html = await readFile(join(path, 'report.html'), 'utf8');
+    expect(html).toContain(`class="status status--${tone}">${status}</strong>`);
+    expect(JSON.parse(await readFile(join(path, 'comparison.json'), 'utf8'))).toMatchObject({ status, result });
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+it.each([
+  ['HEAD_CHANGED', 'PR_HEAD_CHANGED', 'PR head changed'],
+  ['BASE_CHANGED', 'PR_BASE_CHANGED', 'PR base changed'],
+  ['UNKNOWN', 'PR_UNKNOWN', 'PR freshness could not be confirmed'],
+  ['UNCHANGED', 'REGRESSION_CHECK_PASSED', 'PR revisions matched at recheck'],
+] as const)('shows %s separately from the pinned outcome', async (freshness, status, label) => {
+  const root = await mkdtemp(join(tmpdir(), 'forge-freshness-'));
+  try {
+    const pinned = { url: 'https://github.com/owner/repo/pull/2', repository: 'owner/repo', number: 2,
+      state: 'open' as const, merged: false, fork: true,
+      base: { repository: 'owner/repo', sha: base }, head: { repository: 'fork/repo', sha: head } };
+    const pullRequest: PullRequestEvidence = { pinned, freshness, checkedAt: run.startedAt };
+    const result = resultFor('REGRESSION_CHECK_PASSED');
+    const path = await writeComparison(root, { issue, base, head, config: approved, result, pullRequest });
+    const html = await readFile(join(path, 'report.html'), 'utf8');
+    const markdown = await readFile(join(path, 'COMPARISON.md'), 'utf8');
+    expect(html).toContain(`class="status status--${freshness === 'UNCHANGED' ? 'success' : 'warning'}">${status}</strong>`);
+    expect(html).toContain(label);
+    expect(html).toContain('Pinned regression result</dt><dd><code>REGRESSION_CHECK_PASSED</code>');
+    expect(html).toContain('PR freshness</dt>');
+    if (freshness !== 'UNCHANGED') {
+      expect(html).toContain('applies only to the earlier pinned revisions');
+      expect(markdown).toContain('applies only to the earlier pinned revisions');
+    }
+    expect(JSON.parse(await readFile(join(path, 'comparison.json'), 'utf8'))).toMatchObject({ status, result, pullRequest });
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
 
 it('requires distinct full SHAs', () => {
   expect(() => validateComparisonShas(base, head)).not.toThrow();
