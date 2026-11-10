@@ -1,6 +1,6 @@
 # ContributorForge architecture
 
-ContributorForge v0.1 is a local TypeScript CLI on Node.js 22 LTS. pnpm owns
+ContributorForge v0.2 is a local TypeScript CLI on Node.js 22 LTS. pnpm owns
 dependencies; Vitest exercises behavior without third-party repositories.
 
 ## Trust and evidence
@@ -25,13 +25,41 @@ literal failure marker. Timeout, infrastructure errors, truncated evidence and
 unexpected failures cannot prove an issue. A passing check is NOT_REPRODUCED,
 which does not prove the reported bug is fixed generally.
 
+## Base and head comparison
+
+The comparison workflow accepts explicit full base and head commit SHAs. Both
+checkouts belong to the requested public repository and use the same locally
+approved issue-bound configuration. Each revision runs in a fresh Docker
+workspace; source files and dependency state are not shared between revisions.
+Setup and reproduction evidence remain separately inspectable for both sides.
+
+The comparison layer consumes evidence rather than deciding from a head exit code
+alone. `REGRESSION_CHECK_PASSED` requires a reproduced base, a passing head and
+consistent verification evidence. A setup failure, incomplete capture or failed
+cleanup must prevent a successful comparison. This is a result for the configured
+regression check only; an altered test or misleading repository code can invalidate
+the human interpretation. See [the v0.2 methodology](docs/RELEASE_0.2.md).
+
+The expected failure marker is mandatory for comparison. `comparisonCheck` either
+lists source-relative files whose bytes must match at both revisions (`mode:
+files`) or records the local maintainer's explicit attestation that the configured
+command contains the invariant check (`mode: inline`). File identity does not
+prove the identity of all transitive imports, dependencies or dynamic inputs.
+The image ID, Docker server version and platform must agree. These gates are
+intentionally conservative and do not treat absent metadata as matching metadata.
+
+Comparison output includes `comparison.json`, `COMPARISON.md`, `report.html` and
+the separate base/head evidence. Status and exit-code mappings remain distinct
+from single-revision verification so an unchanged reproduced bug cannot look like
+a passing regression comparison.
+
 ## Modules
 
 - `cli`: argument parsing and orchestration; documented exit codes.
 - `config`: strict YAML schema and explicit approval.
 - `github`: public issue metadata and exact source revision.
 - `runner`: bounded subprocess capture and isolated Docker execution.
-- `verification`: pure evidence classification, reusable for base/patch comparison.
+- `verification`: per-run evidence classification and conservative base/head comparison.
 - `tasks`, `reports`: portable JSON, Markdown and escaped local HTML artifacts.
 - `utils`: identifiers, safe paths and best-effort secret redaction.
 

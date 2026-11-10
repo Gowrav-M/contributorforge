@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0 — Unreleased
+
+- Add `compare` for an approved issue-specific check at explicit base and head
+  commits, retaining independent execution evidence for both revisions.
+- Require conservative evidence consistency gates before reporting
+  `REGRESSION_CHECK_PASSED`; a passing head alone is insufficient.
+- Add an authored Docker comparison demonstration with `pnpm demo:compare` and
+  run it in CI alongside the existing verification demo.
+- Document comparison methodology, interpretation and limitations.
+
+No npm publication is implied by this entry.
+
 ## 0.1.0 — Unreleased
 
 - Local CLI with configuration initialization, issue verification and contributor

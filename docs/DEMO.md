@@ -37,3 +37,21 @@ The demo itself exited 0 because both outcomes matched the fixture's expected
 behavior. Open `report.html` in either printed directory to inspect the
 observed output and environment. Repeated runs get fresh paths and preserve
 previous evidence.
+
+## v0.2 side-by-side comparison
+
+```sh
+pnpm demo:compare
+```
+
+Observed output on Docker Desktop 29.9.2:
+
+```text
+REGRESSION_CHECK_PASSED
+Base: 155b4d71a7645ffb9cf6c97fc90ba5d593b0287b REPRODUCED
+Head: 885fed45543db4139d55d23223e62e5f332ace26 NOT_REPRODUCED
+```
+
+The command prints a comparison directory containing `report.html` and the two
+evidence packets. See [historical public issue validation](REAL_WORLD_VALIDATION.md)
+for real GitHub comparisons.

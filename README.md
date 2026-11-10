@@ -15,6 +15,7 @@ After installing from source:
 ```sh
 docker pull node:22-bookworm-slim
 pnpm demo
+pnpm demo:compare
 ```
 
 The authored fixture contains a comma-separated list parser with a deliberate
@@ -22,6 +23,9 @@ trailing-delimiter bug. The demo runs the same regression against its buggy and
 fixed versions, creates task packets, and produces local HTML reports. The buggy
 test emits `ISSUE_1_TRAILING_COMMA`; the fixed test passes. This fixture is local
 test data, not a claim about a real GitHub issue.
+
+The comparison demo checks both commits together and preserves their separate
+evidence. See [the v0.2 comparison guide](docs/RELEASE_0.2.md) for the methodology.
 
 See [the recorded demo](docs/DEMO.md) for exact commands, actual output and report
 paths. A stopped or unavailable Docker engine prevents sandbox verification; the
@@ -49,7 +53,7 @@ node dist/cli/index.js --help
 ```
 
 For a local shell command, optionally run `npm link` after building. The package
-name is `contributorforge`; v0.1 is prepared for packaging, **not published to npm**.
+name is `contributorforge`; v0.2 is prepared for packaging, **not published to npm**.
 Use source installation rather than assuming `npx contributorforge` is available.
 
 ## Quick start
@@ -103,6 +107,44 @@ Use `--config path/to/config.yml` on either command to select a local configurat
 Use `verify --commit <full-40-character-sha>` to reproduce a recorded revision
 instead of the current default-branch commit. Run each command with `--help` for
 its supported options.
+
+## Compare a proposed fix
+
+Run the same approved issue-specific check at two pinned commits:
+
+For comparison, also declare how the check's identity is established in your
+local configuration. Prefer an unchanged regression file:
+
+```yaml
+expectedFailure: ISSUE_42_REGRESSION
+comparisonCheck:
+  mode: files
+  paths:
+    - regression.mjs
+```
+
+The listed check files must have identical bytes at both revisions. If the entire
+check is an invariant command written directly in the reviewed configuration,
+`comparisonCheck: { mode: inline }` records your explicit attestation of that fact.
+It must not be used to claim a repository test is unchanged without checking it.
+
+```sh
+contributorforge compare https://github.com/owner/repository/issues/42 --base <full-base-sha> --head <full-head-sha> --config .contributorforge.yml
+```
+
+Both revisions receive separate checkouts, setup and Docker execution. A passing
+head check is insufficient by itself: the base must reproduce the expected
+failure, the head must pass, and the evidence must satisfy the comparison's
+consistency checks before the status can be `REGRESSION_CHECK_PASSED`.
+Image ID, Docker server version and platform must agree between the runs.
+
+This status describes the approved regression check, not general correctness or
+an independently proven repair. Review both runs and the proposed source change.
+See [comparison methodology and limitations](docs/RELEASE_0.2.md).
+
+Comparison reports contain `comparison.json`, `COMPARISON.md`, `report.html` and
+the individual base/head evidence. Comparison has its own status vocabulary and
+[exit-code table](docs/RELEASE_0.2.md#comparison-statuses).
 
 ## Results and exit codes
 
@@ -164,7 +206,7 @@ need. Image tags may move; use a digest when exact runtime selection matters.
   disposable VM for hostile repositories. See [SECURITY.md](SECURITY.md).
 - Public canonical `https://github.com/owner/repo/issues/number` URLs are supported;
   private repositories, pull requests, URL queries and fragments are rejected.
-- Symlinks and submodules in source are rejected in v0.1 rather than silently
+- Symlinks and submodules in source are rejected rather than silently
   producing an altered or incomplete checkout.
 - The sandbox copy omits `.git`, `node_modules`, `.contributorforge` and filenames
   starting with `.env`. Reproductions must not depend on these source entries.
@@ -191,6 +233,7 @@ pnpm test
 pnpm build
 docker pull node:22-bookworm-slim
 pnpm demo
+pnpm demo:compare
 ```
 
 Core tests use authored fixtures and injected infrastructure responses, not a
