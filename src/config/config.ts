@@ -12,6 +12,10 @@ export const configSchema = z.object({
   setup: command.optional(),
   reproduction: command,
   expectedFailure: z.string().trim().min(1).max(1024).optional(),
+  comparisonCheck: z.discriminatedUnion('mode', [
+    z.object({ mode: z.literal('inline') }).strict(),
+    z.object({ mode: z.literal('files'), paths: z.array(z.string().min(1).max(512)).min(1).max(32) }).strict(),
+  ]).optional(),
   image: z.string().max(256).regex(/^[a-z0-9][a-z0-9._/-]*(?::[A-Za-z0-9_][A-Za-z0-9_.-]*)?(?:@sha256:[a-f0-9]{64})?$/).default('node:22-bookworm-slim'),
   setupNetwork: z.boolean().default(false),
   reproductionNetwork: z.boolean().default(false),

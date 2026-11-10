@@ -1,6 +1,6 @@
 {
   "name": "contributorforge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Verified, reproducible contributor task bundles from GitHub issues",
   "type": "module",
   "bin": { "contributorforge": "dist/cli/index.js" },
@@ -14,6 +14,7 @@
     "test": "vitest run",
     "dev": "tsx src/cli/index.ts",
     "demo": "tsx examples/demo.ts",
+    "demo:compare": "tsx examples/demo.ts --compare",
     "prepack": "pnpm build"
   },
   "license": "MIT",

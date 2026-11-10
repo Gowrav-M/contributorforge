@@ -44,3 +44,5 @@ jobs:
         run: docker pull node:22-bookworm-slim
       - name: Docker fixture demonstration
         run: pnpm demo
+      - name: Docker base and head comparison
+        run: pnpm demo:compare

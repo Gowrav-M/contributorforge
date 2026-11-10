@@ -23,34 +23,34 @@ export function taskId(issue: IssueRef): string {
   return `${issue.owner}-${issue.repo}-${issue.number}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 100) + '-' + createHash('sha256').update(canonical).digest('hex').slice(0, 12);
 }
 
-async function ensureDirectory(path: string): Promise<void> {
+export async function ensureDirectory(path: string): Promise<void> {
   try { await mkdir(path); }
   catch (error: unknown) { if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) throw error; }
   const stat = await lstat(path);
   if (stat.isSymbolicLink() || !stat.isDirectory()) throw new Error(`Unsafe output directory (symlink or non-directory): ${path}`);
 }
 
-function fence(value: string): string {
+export function fence(value: string): string {
   let longest = 2;
   for (const match of value.matchAll(/`+/g)) longest = Math.max(longest, match[0].length);
   const delimiter = '`'.repeat(longest + 1);
   return `${delimiter}\n${value}\n${delimiter}`;
 }
 
-export async function writeBundle(root: string, raw: BundleInput): Promise<string> {
+export async function writeBundle(root: string, raw: BundleInput, comparisonSide?: 'base' | 'head'): Promise<string> {
   const id = taskId(raw.issue);
   if (raw.issue.commit !== undefined && !/^[a-f0-9]{40}$/.test(raw.issue.commit)) throw new Error('Task commit must be a full SHA.');
   // Redact all strings before producing any serialized or rendered artifact.
   const input = JSON.parse(JSON.stringify(raw, (_key, value: unknown) => typeof value === 'string' ? redact(value) : value)) as BundleInput;
   const createdAt = new Date().toISOString();
-  const base = join(resolve(root), '.contributorforge');
+  const base = comparisonSide ? resolve(root) : join(resolve(root), '.contributorforge');
   await ensureDirectory(base);
-  const tasks = join(base, 'tasks');
+  const tasks = comparisonSide ? base : join(base, 'tasks');
   await ensureDirectory(tasks);
-  let destination = join(tasks, id);
+  let destination = join(tasks, comparisonSide ?? id);
   try { await mkdir(destination); }
   catch (error: unknown) {
-    if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) throw error;
+    if (comparisonSide || !(error instanceof Error && 'code' in error && error.code === 'EEXIST')) throw error;
     const existing = await lstat(destination);
     if (existing.isSymbolicLink() || !existing.isDirectory()) throw new Error('Unsafe existing task directory.');
     destination = join(tasks, `${id}-${randomUUID().slice(0, 8)}`);

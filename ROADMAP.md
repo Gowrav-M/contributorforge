@@ -2,16 +2,21 @@
 
 These are proposed milestones, not implemented features or delivery commitments.
 
-## Next: compare a proposed fix against a pinned base
+## v0.2: comparison foundation
 
-Promote the internal buggy/fixed fixture foundation into a command that runs the
-same approved check at two commits. Preserve independent evidence, environment
-identities and setup results. A passing patched check must not erase failures at
-the base or claim general correctness.
+The `compare` command runs an approved check at explicit base and head commits,
+retains both results, and reports `REGRESSION_CHECK_PASSED` only when the collected
+evidence satisfies its consistency gates. See [the v0.2 guide](docs/RELEASE_0.2.md).
+This is a narrow regression result, not a general claim that the issue is fixed.
+
+## Next: portable evidence with integrity checks
+
+Export/import a task archive with configuration and artifact integrity hashes.
+Make missing or altered evidence explicit during import, and preserve the
+maintainer approval boundary instead of automatically executing imported commands.
 
 ## Reproducibility
 
-- Export/import a task archive with configuration and artifact integrity hashes.
 - Improve runtime digest pinning and dependency-cache provenance.
 - Add explicit support for Git LFS, symlinks and submodules only with safe,
   reproducible source materialization.

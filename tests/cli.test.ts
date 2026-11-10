@@ -22,11 +22,15 @@ describe('CLI', () => {
       expect(id).toBeTruthy();
       const report = JSON.parse(await readFile(join(tasks, id!, 'task.json'), 'utf8')) as { execution: unknown };
       expect(report.execution).toBeNull();
+      const comparison = await runProcess(process.execPath, ['--import', tsx, cli, 'compare', 'https://github.com/owner/repo/issues/1', '--base', 'a'.repeat(40), '--head', 'b'.repeat(40)], { cwd });
+      expect(comparison.exitCode, comparison.output).toBe(2);
+      expect(comparison.output).toContain('CHECK_MISMATCH');
+      expect(comparison.output).toContain('match the requested repository and issue');
     } finally { await rm(cwd, { recursive: true, force: true }); }
   });
-  it('documents all three commands', () => {
+  it('documents all four commands', () => {
     const help = createProgram().helpInformation();
-    for (const command of ['init', 'verify', 'start']) expect(help).toContain(command);
+    for (const command of ['init', 'verify', 'start', 'compare']) expect(help).toContain(command);
   });
   it('creates an unapproved template without overwriting files', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'forge init '));
