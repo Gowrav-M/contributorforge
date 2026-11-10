@@ -1,6 +1,6 @@
 {
   "name": "contributorforge",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Verified, reproducible contributor task bundles from GitHub issues",
   "type": "module",
   "bin": { "contributorforge": "dist/cli/index.js" },

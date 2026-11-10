@@ -2,6 +2,7 @@ export interface Config {
   version: 1;
   repository: string;
   issue: number;
+  pullRequest?: number;
   approved: true;
   setup?: string;
   reproduction: string;
